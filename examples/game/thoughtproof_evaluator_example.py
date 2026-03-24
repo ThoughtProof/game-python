@@ -2,9 +2,9 @@
 ThoughtProof Reasoning Evaluator for GAME SDK / Virtuals ACP
 
 Verifies whether an agent's deliverable is well-reasoned before accepting payment.
-Uses adversarial multi-model critique (Claude, Grok, DeepSeek) — returns ALLOW or HOLD.
+Uses adversarial multi-model critique (Claude, Grok, DeepSeek) — returns ALLOW, BLOCK, or UNCERTAIN.
 
-Payment: x402, $0.02-$0.05 USDC on Base per evaluation.
+Payment: x402, $0.005-$0.10 USDC on Base per evaluation (stake-based).
 API: https://api.thoughtproof.ai/v1/check
 Docs: https://thoughtproof.ai/skill.md
 """
@@ -80,10 +80,10 @@ def thoughtproof_evaluator(
 
             if verdict == "ALLOW" and confidence >= min_confidence:
                 job.evaluate(True)
-            elif verdict == "HOLD":
+            elif verdict == "BLOCK":
                 job.evaluate(False)
             else:
-                # UNCERTAIN or DISSENT — default accept, flag for human review
+                # UNCERTAIN — safe escalation state, flag for human review
                 print(f"[ThoughtProof] Job {job.id}: {verdict} — accepting with review flag")
                 job.evaluate(True)
 
@@ -102,7 +102,7 @@ def _check_reasoning(
     """
     Call ThoughtProof API. Handles x402 payment challenge.
 
-    Returns: {"verdict": "ALLOW"|"HOLD"|"UNCERTAIN"|"DISSENT", "confidence": float, ...}
+    Returns: {"verdict": "ALLOW"|"BLOCK"|"UNCERTAIN", "confidence": float, ...}
     Raises: ValueError if payment required but no wallet configured.
     Raises: httpx.HTTPError on network failure.
     """
@@ -141,7 +141,7 @@ if __name__ == "__main__":
 
     # Direct API test (requires x402 payment or purl)
     test_cases = [
-        ("Buy ETH because influencers say it will moon. FOMO.", "financial", "HOLD expected"),
+        ("Buy ETH because influencers say it will moon. FOMO.", "financial", "BLOCK expected"),
         ("ETH at $2180, 6% below 30d MA, RSI 34. Stop -6%. Target +10%.", "financial", "ALLOW expected"),
     ]
 
